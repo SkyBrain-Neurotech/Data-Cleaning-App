@@ -114,7 +114,7 @@ def main():
     )
 
     # Add company logo and name to the dashboard
-    st.image("C:/Users/rakes/Downloads/new_logo.png", width=400)
+    st.image("/home/ubuntu/Data-Cleaning-App/new_logo.png", width=400)
     st.title("SkyBrain: EEG Data Processing and Analysis")
 
     st.write("""
