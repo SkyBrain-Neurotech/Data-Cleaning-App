@@ -4,6 +4,7 @@ import numpy as np
 import mne
 import matplotlib.pyplot as plt
 from mne.preprocessing import ICA
+import io
 
 # Function to load EEG data into MNE RawArray
 def load_eeg_data(data, channel_names, sfreq):
@@ -76,7 +77,8 @@ def plot_selected_channel(raw, filtered, cleaned, channel, plot_type):
         cleaned.plot_psd(picks=channel, ax=ax, fmax=100, show=False, color='green', average=True, n_fft=2048)
         ax.legend(["Raw Signal", "Filtered Signal", "Filtered + ICA Signal"])
         st.pyplot(fig)
-        
+
+# Function to plot PSD comparison for all channels
 def plot_psd_all_channels(raw, filtered, cleaned, channel_names):
     st.write("Power Spectral Density (PSD) Comparison for All Channels")
     
@@ -102,7 +104,6 @@ def plot_psd_all_channels(raw, filtered, cleaned, channel_names):
     
     fig.tight_layout()
     st.pyplot(fig)
-
 
 # Function to generate MNE-supported EEG file with metadata
 def generate_eeg_file(raw, file_name, extra_metadata=None):
@@ -113,31 +114,12 @@ def generate_eeg_file(raw, file_name, extra_metadata=None):
     raw.save(file_name, overwrite=True)
     st.success(f"EEG data saved as {file_name} with metadata: {extra_metadata}")
 
-def plot_psd_all_channels(raw, filtered, cleaned, channel_names):
-    st.write("Power Spectral Density (PSD) Comparison for All Channels")
-    
-    # Create a figure with three subplots: Raw, Bandpass, and Bandpass + ICA
-    fig, axes = plt.subplots(3, 1, figsize=(15, 12), sharex=True)
-    
-    # Plot PSD for raw signal
-    raw.plot_psd(picks=channel_names, ax=axes[0], fmax=100, show=False, color='blue', average=True, n_fft=2048)
-    axes[0].set_title("Raw Signal PSD")
-    
-    # Plot PSD for bandpass-filtered signal
-    filtered.plot_psd(picks=channel_names, ax=axes[1], fmax=100, show=False, color='orange', average=True, n_fft=2048)
-    axes[1].set_title("Bandpass-Filtered Signal PSD")
-    
-    # Plot PSD for bandpass-filtered + ICA cleaned signal
-    cleaned.plot_psd(picks=channel_names, ax=axes[2], fmax=100, show=False, color='green', average=True, n_fft=2048)
-    axes[2].set_title("Bandpass-Filtered + ICA Cleaned Signal PSD")
-    
-    # Set common labels
-    for ax in axes:
-        ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel('Power Spectral Density (dB/Hz)')
-    
-    fig.tight_layout()
-    st.pyplot(fig)
+# Function to save the processed data as a CSV file in memory
+def save_as_csv(raw, channel_names):
+    data = raw.get_data().T  # Transpose to get channels as columns
+    df = pd.DataFrame(data, columns=channel_names)
+    return df.to_csv(index=False)
+
 # Streamlit app for EEG data processing and comparison
 def main():
     st.title("EEG Data Processing and Analysis")
@@ -186,6 +168,17 @@ def main():
             filtered = apply_bandpass_filter(raw, l_freq, h_freq)
             st.session_state['filtered'] = filtered
 
+            # Save processed data to CSV in memory
+            csv_data = save_as_csv(filtered, channel_names)
+
+            # Provide a download button for the CSV
+            st.download_button(
+                label="Download Filtered EEG Data as CSV",
+                data=csv_data,
+                file_name="filtered_eeg_data.csv",
+                mime="text/csv"
+            )
+
         # Input Metadata for Filtered Data
         if 'filtered' in st.session_state:
             st.write("### Input Metadata for Filtered Data")
@@ -216,6 +209,17 @@ def main():
             st.session_state['cleaned'] = cleaned
 
             plot_overview_all_channels(raw, filtered, cleaned, channel_names)
+
+            # Save processed data to CSV in memory
+            csv_data = save_as_csv(cleaned, channel_names)
+
+            # Provide a download button for the CSV
+            st.download_button(
+                label="Download Filtered + ICA EEG Data as CSV",
+                data=csv_data,
+                file_name="filtered_ica_eeg_data.csv",
+                mime="text/csv"
+            )
 
         # Input Metadata for Filtered + ICA Data
         if 'cleaned' in st.session_state:
